@@ -1,0 +1,94 @@
+# Multi-stage Dockerfile for cross-compiling Flutter Linux app for multiple architectures
+
+# Stage 1: Build for x64
+FROM ubuntu:22.04 AS builder-x64
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    unzip \
+    xz-utils \
+    zip \
+    libglu1-mesa \
+    clang \
+    cmake \
+    ninja-build \
+    pkg-config \
+    libgtk-3-dev \
+    liblzma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download Flutter
+RUN curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.7-stable.tar.xz \
+    && tar xf flutter.tar.xz \
+    && rm flutter.tar.xz
+
+# Set PATH
+ENV PATH="/flutter/bin:${PATH}"
+
+# Copy source code
+COPY . /app
+WORKDIR /app
+
+# Get dependencies
+RUN flutter pub get
+
+# Build for x64
+RUN flutter build linux --target-platform linux-x64 --release
+
+# Stage 2: Build for ARM64
+FROM ubuntu:22.04 AS builder-arm64
+
+# Install dependencies for cross-compilation
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    unzip \
+    xz-utils \
+    zip \
+    libglu1-mesa \
+    clang \
+    cmake \
+    ninja-build \
+    pkg-config \
+    libgtk-3-dev \
+    liblzma-dev \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download Flutter
+RUN curl -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.7-stable.tar.xz \
+    && tar xf flutter.tar.xz \
+    && rm flutter.tar.xz
+
+# Set PATH and environment for cross-compilation
+ENV PATH="/flutter/bin:${PATH}"
+ENV FLUTTER_TARGET_ARCH="arm64"
+ENV TOOLCHAIN_PREFIX="aarch64-linux-gnu"
+
+# Copy source code
+COPY . /app
+WORKDIR /app
+
+# Get dependencies
+RUN flutter pub get
+
+# Build for ARM64
+RUN flutter build linux --target-platform linux-arm64 --release --target-sysroot /usr/aarch64-linux-gnu
+
+# Stage 3: Create final output
+FROM ubuntu:22.04 AS output
+
+# Create output directory
+RUN mkdir -p /output
+
+# Copy built applications
+COPY --from=builder-x64 /app/build/linux/x64/release/bundle /output/linux-x64
+COPY --from=builder-arm64 /app/build/linux/arm64/release/bundle /output/linux-arm64
+
+# Create a simple script to verify builds
+RUN echo "#!/bin/bash\necho 'Linux x64 build:'\nls -la /output/linux-x64/\necho ''\necho 'Linux ARM64 build:'\nls -la /output/linux-arm64/\n" > /output/verify.sh && chmod +x /output/verify.sh
+
+WORKDIR /output

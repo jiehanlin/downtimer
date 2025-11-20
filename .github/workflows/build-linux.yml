@@ -1,0 +1,125 @@
+name: Build Linux Multi-Architecture
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: [x64, arm64]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.7'
+        channel: 'stable'
+        
+    - name: Install Linux dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgtk-3-dev \
+          liblzma-dev
+          
+    - name: Get Flutter dependencies
+      run: flutter pub get
+      
+    - name: Build for Linux ${{ matrix.architecture }}
+      run: |
+        if [ "${{ matrix.architecture }}" = "arm64" ]; then
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo mkdir -p /usr/aarch64-linux-gnu
+          sudo cp -r /usr/include /usr/aarch64-linux-gnu/
+          sudo cp -r /usr/lib /usr/aarch64-linux-gnu/
+          flutter build linux --target-platform linux-arm64 --release --target-sysroot /usr/aarch64-linux-gnu
+        else
+          flutter build linux --target-platform linux-x64 --release
+        fi
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: downtimer-linux-${{ matrix.architecture }}
+        path: build/linux/${{ matrix.architecture }}/release/bundle/
+        
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        
+    - name: Create release archives
+      run: |
+        mkdir -p release
+        
+        # Create x64 archive
+        cd artifacts/downtimer-linux-x64
+        tar -czf ../../release/downtimer-linux-x64.tar.gz .
+        cd ../..
+        
+        # Create ARM64 archive
+        cd artifacts/downtimer-linux-arm64
+        tar -czf ../../release/downtimer-linux-arm64.tar.gz .
+        cd ../..
+        
+        # Create release notes
+        cat > release/NOTES.md << 'EOF'
+        # DownTimer Linux Release
+        
+        ## Downloads
+        - `downtimer-linux-x64.tar.gz`: For 64-bit Intel/AMD systems
+        - `downtimer-linux-arm64.tar.gz`: For 64-bit ARM systems (Raspberry Pi 4, etc.)
+        
+        ## Installation
+        ```bash
+        # Extract and run
+        tar -xzf downtimer-linux-*.tar.gz
+        ./downtimer
+        ```
+        
+        ## System Requirements
+        - Linux with X11 or Wayland
+        - GTK 3.0 or later
+        - OpenGL ES 2.0 or later
+        
+        ## Dependencies (Ubuntu/Debian)
+        ```bash
+        sudo apt-get install libgtk-3-0 libxss1 libasound2
+        ```
+        EOF
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          release/downtimer-linux-x64.tar.gz
+          release/downtimer-linux-arm64.tar.gz
+        body_path: release/NOTES.md
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
