@@ -18,6 +18,18 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSwatch().copyWith(
           secondary: const Color(0xFF00FF41),
         ),
+        textTheme: const TextTheme(
+          // 所有文本样式都会使用这个字体
+          bodyLarge: TextStyle(fontFamily: 'NotoSansSC'),
+          bodyMedium: TextStyle(fontFamily: 'NotoSansSC'),
+          displayLarge: TextStyle(fontFamily: 'NotoSansSC'),
+          displayMedium: TextStyle(fontFamily: 'NotoSansSC'),
+          headlineMedium: TextStyle(fontFamily: 'NotoSansSC'),
+          headlineSmall: TextStyle(fontFamily: 'NotoSansSC'),
+          titleLarge: TextStyle(fontFamily: 'NotoSansSC'),
+          titleMedium: TextStyle(fontFamily: 'NotoSansSC'),
+          // 可以根据需要添加更多样式
+        ),
       ),
       home: const HomePage(),
       debugShowCheckedModeBanner: false,
@@ -86,34 +98,41 @@ class _HomePageState extends State<HomePage> with WindowListener {
         // 标题栏
         _buildTitleBar(),
         
-        // 主要内容 - 使用 SingleChildScrollView 彻底防止溢出
+        // 主要内容区域
         Expanded(
-          child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - 40, // 减去标题栏高度
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  children: [
-                    // LED显示区域 - 固定高度
-                    SizedBox(
-                      height: 150,
-                      child: _buildLEDDisplay(timerModel),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // 确保有足够的最小空间避免溢出
+              final minContentHeight = 240; // LED(150) + 间距(12) + 控制面板(78)
+              final contentHeight = constraints.maxHeight.clamp(minContentHeight, double.infinity);
+              
+              return Column(
+                children: [
+                  // LED显示区域 - 固定高度，响应式字体
+                  Container(
+                    height: 150,
+                    padding: const EdgeInsets.all(10),
+                    child: _buildLEDDisplay(timerModel),
+                  ),
+                  
+                  const SizedBox(height: 1),
+                  
+                  // 控制面板 - 使用最小高度确保不溢出，并向下对齐
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minHeight: 78, // 控制面板的最小高度
+                        ),
+                        padding: const EdgeInsets.only(bottom: 10,left: 10,right: 10),
+                        child: const ControlPanel(),
+                      ),
                     ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // 控制面板 - 让它自然占用所需高度
-                    const ControlPanel(),
-                    
-                    // 底部留出空间
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -222,7 +241,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       builder: (context, constraints) {
         // 根据窗口大小计算字体大小
         final maxWidth = constraints.maxWidth;
-        final fontSize = (maxWidth * 0.25).clamp(24.0, 120.0);
+        final fontSize = (maxWidth * 0.26).clamp(24.0, 120.0);
         
         return LEDDisplay(
           timeString: timerModel.formattedTime,
@@ -240,7 +259,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       builder: (context, constraints) {
         // 最小化模式下也增大字体比例
         final maxWidth = constraints.maxWidth;
-        final fontSize = (maxWidth * 0.22).clamp(28.0, 100.0); // 增大最小化模式的字体
+        final fontSize = (maxWidth * 0.26).clamp(28.0, 100.0); // 增大最小化模式的字体
         
         return LEDDisplay(
           timeString: timerModel.formattedTime,
@@ -261,7 +280,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       builder: (context, constraints) {
         // 超小模式下调整字体大小以适应280px宽度
         final maxWidth = constraints.maxWidth;
-        final fontSize = (maxWidth * 0.18).clamp(28.0, 80.0); // 减小字体大小避免溢出
+        final fontSize = (maxWidth * 0.25).clamp(28.0, 80.0); // 减小字体大小避免溢出
         
         return LEDDisplay(
           timeString: timerModel.formattedTime,

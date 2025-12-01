@@ -10,12 +10,16 @@ class TimerModel with ChangeNotifier {
   int _displayMode = 0; // 0: 正常模式, 1: 最小化模式, 2: 超小模式
 
   // 快捷时间设置（分钟）
-  static const List<int> quickTimes = [3, 5, 8, 15, 20];
+  static const List<int> quickTimes = [3, 5, 8, 15, 20,30];
 
   int get totalSeconds => _totalSeconds;
   int get remainingSeconds => _remainingSeconds;
   bool get isRunning => _isRunning;
   int get displayMode => _displayMode;
+
+  // 警告状态检测
+  bool get isOneMinuteWarning => _remainingSeconds <= 60 && _remainingSeconds > 10;
+  bool get isTenSecondsWarning => _remainingSeconds <= 10 && _remainingSeconds > 0;
 
   // 获取格式化时间字符串
   String get formattedTime {
@@ -80,13 +84,16 @@ class TimerModel with ChangeNotifier {
     
     switch (_displayMode) {
       case 0: // 正常模式
-        await windowManager.setSize(const Size(450, 370));
+        await windowManager.setSize(const Size(450, 330));
+        await windowManager.setAlignment(Alignment.center);
         break;
       case 1: // 最小化模式
-        await windowManager.setSize(const Size(450, 130));
+        await windowManager.setSize(const Size(400, 130));
+        await windowManager.setAlignment(Alignment.center);
         break;
       case 2: // 超小模式
-        await windowManager.setSize(const Size(280, 65));
+        await windowManager.setSize(const Size(200, 60));
+        await windowManager.setAlignment(Alignment.center);
         break;
     }
     

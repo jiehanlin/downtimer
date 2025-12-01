@@ -13,13 +13,13 @@ void main() async {
   
   // 设置窗口选项
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(450, 370),
+    size: Size(450, 330),
     center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
     alwaysOnTop: true,
-    minimumSize: Size(200, 100),
+    minimumSize: Size(320, 330), // 设置最小尺寸避免溢出
     maximumSize: Size(800, 600),
     windowButtonVisibility: false,
   );

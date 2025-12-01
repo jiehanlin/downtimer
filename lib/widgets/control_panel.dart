@@ -8,9 +8,10 @@ class ControlPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timerModel = Provider.of<TimerModel>(context);
+    final isCompact = MediaQuery.of(context).size.height < 320;
     
     return Container(
-      padding: const EdgeInsets.all(10), // 进一步减小padding
+      padding: EdgeInsets.all(isCompact ? 4 : 8), // 根据高度动态调整padding
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(8),
@@ -20,22 +21,22 @@ class ControlPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // 快捷时间设置按钮
-          _buildQuickTimeButtons(timerModel),
-          const SizedBox(height: 6), // 减小间距
+          _buildQuickTimeButtons(timerModel, isCompact),
+          SizedBox(height: isCompact ? 5 : 10),
           // 微调按钮
-          _buildAdjustmentButtons(timerModel),
-          const SizedBox(height: 6), // 减小间距
+          _buildAdjustmentButtons(timerModel, isCompact),
+          SizedBox(height: isCompact ? 5 : 10),
           // 控制按钮
-          _buildControlButtons(timerModel),
+          _buildControlButtons(timerModel, isCompact),
         ],
       ),
     );
   }
 
-  Widget _buildQuickTimeButtons(TimerModel timerModel) {
+  Widget _buildQuickTimeButtons(TimerModel timerModel, bool isCompact) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: isCompact ? 4 : 8,
+      runSpacing: isCompact ? 2 : 4,
       children: TimerModel.quickTimes.map((minutes) {
         return ElevatedButton(
           onPressed: () => timerModel.setTime(minutes),
@@ -46,15 +47,22 @@ class ControlPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               side: BorderSide(color: const Color(0xFF00FF41).withValues(alpha: 0.3)),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 6 : 10, 
+              vertical: isCompact ? 2 : 4
+            ),
+            minimumSize: Size(isCompact ? 40 : 50, isCompact ? 20 : 28),
           ),
-          child: Text('${minutes}min'),
+          child: Text(
+            '${minutes}min',
+            style: TextStyle(fontSize: isCompact ? 10 : 14),
+          ),
         );
       }).toList(),
     );
   }
 
-  Widget _buildAdjustmentButtons(TimerModel timerModel) {
+  Widget _buildAdjustmentButtons(TimerModel timerModel, bool isCompact) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -64,13 +72,17 @@ class ControlPanel extends StatelessWidget {
             backgroundColor: const Color(0xFF2A2A2A),
             foregroundColor: const Color(0xFF00FF41),
             shape: const CircleBorder(),
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(isCompact ? 6 : 10),
+            minimumSize: Size(isCompact ? 32 : 40, isCompact ? 32 : 40),
           ),
-          child: const Icon(Icons.remove, size: 20),
+          child: Icon(Icons.remove, size: isCompact ? 16 : 24),
         ),
         
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 8 : 16, 
+            vertical: isCompact ? 4 : 6
+          ),
           decoration: BoxDecoration(
             color: const Color(0xFF0A0A0A),
             borderRadius: BorderRadius.circular(4),
@@ -78,9 +90,11 @@ class ControlPanel extends StatelessWidget {
           ),
           child: Text(
             '${timerModel.totalSeconds ~/ 60} min',
-            style: const TextStyle(
-              color: Color(0xFF00FF41),
+            style: TextStyle(
+              color: const Color(0xFF00FF41),
               fontWeight: FontWeight.bold,
+              fontFamily: "NotoSansSC",
+              fontSize: isCompact ? 10 : 14,
             ),
           ),
         ),
@@ -91,15 +105,16 @@ class ControlPanel extends StatelessWidget {
             backgroundColor: const Color(0xFF2A2A2A),
             foregroundColor: const Color(0xFF00FF41),
             shape: const CircleBorder(),
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(isCompact ? 6 : 10),
+            minimumSize: Size(isCompact ? 32 : 40, isCompact ? 32 : 40),
           ),
-          child: const Icon(Icons.add, size: 20),
+          child: Icon(Icons.add, size: isCompact ? 16 : 24),
         ),
       ],
     );
   }
 
-  Widget _buildControlButtons(TimerModel timerModel) {
+  Widget _buildControlButtons(TimerModel timerModel, bool isCompact) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -110,14 +125,22 @@ class ControlPanel extends StatelessWidget {
                 ? const Color(0xFFFF4444) 
                 : const Color(0xFF00AA00),
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 10 : 16, 
+              vertical: isCompact ? 6 : 8
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
             ),
+            minimumSize: Size(isCompact ? 50 : 60, isCompact ? 24 : 32),
           ),
           child: Text(
             timerModel.isRunning ? '暂停' : '开始',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: "NotoSansSC",
+              fontSize: isCompact ? 10 : 14,
+            ),
           ),
         ),
         
@@ -126,12 +149,23 @@ class ControlPanel extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2A2A2A),
             foregroundColor: const Color(0xFF00FF41),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 10 : 16, 
+              vertical: isCompact ? 6 : 8
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
             ),
+            minimumSize: Size(isCompact ? 50 : 60, isCompact ? 24 : 32),
           ),
-          child: const Text('重置', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: Text(
+            '重置', 
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontFamily: "NotoSansSC",
+              fontSize: isCompact ? 10 : 14,
+            ),
+          ),
         ),
       ],
     );

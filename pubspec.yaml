@@ -20,6 +20,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: NotoSansSC
+      fonts:
+        - asset: fonts/NotoSansSC-Regular.ttf
+          weight: 700
+    - family: DSDigital
+      fonts:
+        - asset: fonts/DS-DIGI-1.ttf
+        - asset: fonts/DS-DIGIB-2.ttf
+          weight: 700
 
 # Platform-specific configurations
 # Linux configuration
