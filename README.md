@@ -2,7 +2,8 @@
 
 <div align="center">
 
-![DownTimer Logo](https://via.placeholder.com/150x150/FF6B6B/FFFFFF?text=DT)
+![image](public/image/greentheme.jpg)
+![image](public/image/bluetheme.jpg)
 
 **一个优雅的跨平台桌面倒计时工具**
 
@@ -36,7 +37,7 @@ DownTimer 是一个基于 Flutter 开发的跨平台桌面倒计时应用，专�
 - 🔄 **自适应大小** - LED字体随窗口尺寸智能调整
 
 ### 🎨 视觉设计
-- 🌙 **主题支持** - 明暗主题自动切换
+- 🌙 **主题支持** - 绿色和蓝色主题切换
 - 🚨 **警告提示** - 倒计时最后10秒背景颜色警告
 - 🎭 **字体定制** - 使用专业的LED数字字体
 - 💫 **流畅动画** - 精心设计的过渡效果
