@@ -237,7 +237,7 @@ lib/
 - **项目主页**: [https://github.com/jiehanlin/downtimer](https://github.com/jiehanlin/downtimer)
 - **问题反馈**: [GitHub Issues](https://github.com/jiehanlin/downtimer/issues)
 - **功能建议**: [GitHub Discussions](https://github.com/jiehanlin/downtimer/discussions)
-- **邮箱**: your-email@example.com
+- **邮箱**: jiehanlin@qq.com
 
 ---
 
