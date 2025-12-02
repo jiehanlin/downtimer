@@ -69,10 +69,16 @@ class TimerModel with ChangeNotifier {
     }
   }
 
-  // 重置计时器
+  // 重置计时器并自动启动
   void resetTimer() {
     _stopTimer();
     _remainingSeconds = _totalSeconds;
+    
+    // 如果有时间设置，自动启动计时
+    if (_remainingSeconds > 0) {
+      _startTimer();
+    }
+    
     notifyListeners();
   }
 
@@ -82,19 +88,48 @@ class TimerModel with ChangeNotifier {
     
     _displayMode = mode;
     
-    switch (_displayMode) {
-      case 0: // 正常模式
-        await windowManager.setSize(const Size(450, 330));
-        await windowManager.setAlignment(Alignment.center);
-        break;
-      case 1: // 最小化模式
-        await windowManager.setSize(const Size(400, 130));
-        await windowManager.setAlignment(Alignment.center);
-        break;
-      case 2: // 超小模式
-        await windowManager.setSize(const Size(200, 60));
-        await windowManager.setAlignment(Alignment.center);
-        break;
+    try {
+      // 获取当前窗口位置信息，用于保持位置
+      final currentPosition = await windowManager.getPosition();
+      
+      switch (_displayMode) {
+        case 0: // 正常模式
+          await windowManager.setSize(const Size(450, 330));
+          // 只有在首次启动或从其他模式恢复时才居中
+          if (currentPosition.dx == 0 && currentPosition.dy == 0) {
+            await windowManager.setAlignment(Alignment.center);
+          } else {
+            // 保持当前位置
+            await windowManager.setPosition(currentPosition);
+          }
+          break;
+        case 1: // 最小化模式
+          await windowManager.setSize(const Size(400, 130));
+          // 保持当前位置
+          await windowManager.setPosition(currentPosition);
+          break;
+        case 2: // 超小模式
+          await windowManager.setSize(const Size(200, 60));
+          // 保持当前位置
+          await windowManager.setPosition(currentPosition);
+          break;
+      }
+    } catch (e) {
+      // 如果位置获取失败，至少保证尺寸正确，居中显示
+      switch (_displayMode) {
+        case 0:
+          await windowManager.setSize(const Size(450, 330));
+          await windowManager.setAlignment(Alignment.center);
+          break;
+        case 1:
+          await windowManager.setSize(const Size(400, 130));
+          await windowManager.setAlignment(Alignment.center);
+          break;
+        case 2:
+          await windowManager.setSize(const Size(200, 60));
+          await windowManager.setAlignment(Alignment.center);
+          break;
+      }
     }
     
     notifyListeners();

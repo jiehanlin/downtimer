@@ -5,34 +5,43 @@ import 'package:window_manager/window_manager.dart';
 import 'models/timer_model.dart';
 import 'widgets/led_display.dart';
 import 'widgets/control_panel.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_manager.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '倒计时器',
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-        colorScheme: ColorScheme.fromSwatch().copyWith(
-          secondary: const Color(0xFF00FF41),
-        ),
-        textTheme: const TextTheme(
-          // 所有文本样式都会使用这个字体
-          bodyLarge: TextStyle(fontFamily: 'NotoSansSC'),
-          bodyMedium: TextStyle(fontFamily: 'NotoSansSC'),
-          displayLarge: TextStyle(fontFamily: 'NotoSansSC'),
-          displayMedium: TextStyle(fontFamily: 'NotoSansSC'),
-          headlineMedium: TextStyle(fontFamily: 'NotoSansSC'),
-          headlineSmall: TextStyle(fontFamily: 'NotoSansSC'),
-          titleLarge: TextStyle(fontFamily: 'NotoSansSC'),
-          titleMedium: TextStyle(fontFamily: 'NotoSansSC'),
-          // 可以根据需要添加更多样式
-        ),
+    return ChangeNotifierProvider(
+      create: (context) => ThemeManager(),
+      child: Consumer<ThemeManager>(
+        builder: (context, themeManager, child) {
+          return MaterialApp(
+            title: '倒计时器',
+            theme: ThemeData.dark().copyWith(
+              scaffoldBackgroundColor: AppTheme.darkBackground,
+              colorScheme: ColorScheme.fromSwatch().copyWith(
+                secondary: AppTheme.getPrimaryColor(themeManager),
+              ),
+              textTheme: const TextTheme(
+                // 所有文本样式都会使用这个字体
+                bodyLarge: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                bodyMedium: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                displayLarge: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                displayMedium: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                headlineMedium: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                headlineSmall: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                titleLarge: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                titleMedium: TextStyle(fontFamily: AppTheme.chineseFontFamily),
+                // 可以根据需要添加更多样式
+              ),
+            ),
+            home: const HomePage(),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
-      home: const HomePage(),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -65,14 +74,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       backgroundColor: Colors.transparent,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0A0A0A),
-              Color(0xFF1A1A1A),
-            ],
-          ),
+          gradient: AppTheme.backgroundGradient,
         ),
         child: _buildView(timerModel),
       ),
@@ -102,9 +104,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // 确保有足够的最小空间避免溢出
-              final minContentHeight = 240; // LED(150) + 间距(12) + 控制面板(78)
-              final contentHeight = constraints.maxHeight.clamp(minContentHeight, double.infinity);
+            // 确保有足够的最小空间避免溢出
+            // LED(150) + 间距(12) + 控制面板(78) = 240
               
               return Column(
                 children: [
@@ -125,7 +126,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         constraints: const BoxConstraints(
                           minHeight: 78, // 控制面板的最小高度
                         ),
-                        padding: const EdgeInsets.only(bottom: 10,left: 10,right: 10),
+                        padding: const EdgeInsets.only(bottom: 10, left: 10, right: 10),
                         child: const ControlPanel(),
                       ),
                     ),
@@ -168,86 +169,90 @@ class _HomePageState extends State<HomePage> with WindowListener {
   }
 
   Widget _buildTitleBar() {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        border: Border(bottom: BorderSide(color: const Color(0xFF00FF41).withValues(alpha: 0.2))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onPanStart: (details) {
-                windowManager.startDragging();
-              },
-              child: Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.only(left: 16),
-                child: const Text(
-                  '倒计时器',
-                  style: TextStyle(
-                    color: Color(0xFF00FF41),
-                    fontWeight: FontWeight.bold,
+    return Consumer2<TimerModel, ThemeManager>(
+      builder: (context, timerModel, themeManager, child) {
+        return GestureDetector(
+          onPanStart: (details) {
+            windowManager.startDragging();
+          },
+          child: Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.mediumBackground,
+              border: Border(bottom: BorderSide(color: AppTheme.borderColorWithOpacity(themeManager, 0.2))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text(
+                      '倒计时器',
+                      style: AppTheme.titleStyle(themeManager),
+                    ),
                   ),
                 ),
-              ),
+                
+                // 窗口控制按钮 - 需要阻止拖动事件冒泡
+                Row(
+                  children: [
+                    // 只在正常模式下显示最小化按钮
+                    if (timerModel.displayMode == 0) ...[
+                      GestureDetector(
+                        onTap: () {
+                          timerModel.minimizeWindow();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.minimize, size: 16, color: AppTheme.getPrimaryColor(themeManager)),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          timerModel.setDisplayMode(2);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.fullscreen_exit, size: 16, color: AppTheme.getPrimaryColor(themeManager)),
+                        ),
+                      ),
+                    ],
+                    GestureDetector(
+                      onTap: () => windowManager.close(),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.close, size: 16, color: AppTheme.warningColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          
-          // 窗口控制按钮
-          Row(
-            children: [
-              // 只在正常模式下显示最小化按钮
-              Consumer<TimerModel>(
-                builder: (context, timerModel, child) {
-                  if (timerModel.displayMode == 0) {
-                    return Row(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            timerModel.minimizeWindow();
-                          },
-                          icon: const Icon(Icons.minimize, size: 16, color: Color(0xFF00FF41)),
-                          tooltip: '最小化',
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            timerModel.setDisplayMode(2);
-                          },
-                          icon: const Icon(Icons.fullscreen_exit, size: 16, color: Color(0xFF00FF41)),
-                          tooltip: '超小化',
-                        ),
-                      ],
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              IconButton(
-                onPressed: () => windowManager.close(),
-                icon: const Icon(Icons.close, size: 16, color: Color(0xFFFF4444)),
-                tooltip: '关闭',
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildLEDDisplay(TimerModel timerModel) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 根据窗口大小计算字体大小
-        final maxWidth = constraints.maxWidth;
-        final fontSize = (maxWidth * 0.26).clamp(24.0, 120.0);
-        
-        return LEDDisplay(
-          timeString: timerModel.formattedTime,
-          fontSize: fontSize,
-          onDoubleTap: () {
-            Provider.of<TimerModel>(context, listen: false).restoreWindow();
+    return Consumer<ThemeManager>(
+      builder: (context, themeManager, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // 根据窗口大小计算字体大小
+            final maxWidth = constraints.maxWidth;
+            final fontSize = (maxWidth * 0.26).clamp(24.0, 120.0);
+            
+            return LEDDisplay(
+              timeString: timerModel.formattedTime,
+              fontSize: fontSize,
+              backgroundColor: AppTheme.darkBackground,
+              padding: const EdgeInsets.all(16),
+              onDoubleTap: () {
+                Provider.of<TimerModel>(context, listen: false).restoreWindow();
+              },
+            );
           },
         );
       },
@@ -255,20 +260,23 @@ class _HomePageState extends State<HomePage> with WindowListener {
   }
 
   Widget _buildCompactLEDDisplay(TimerModel timerModel) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 最小化模式下也增大字体比例
-        final maxWidth = constraints.maxWidth;
-        final fontSize = (maxWidth * 0.26).clamp(28.0, 100.0); // 增大最小化模式的字体
-        
-        return LEDDisplay(
-          timeString: timerModel.formattedTime,
-          fontSize: fontSize,
-          color: const Color(0xFF00FF41),
-          backgroundColor: const Color(0xFF0A0A0A),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2), // 增加垂直padding确保上下对称
-          onDoubleTap: () {
-            Provider.of<TimerModel>(context, listen: false).restoreWindow();
+    return Consumer<ThemeManager>(
+      builder: (context, themeManager, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // 最小化模式下也增大字体比例
+            final maxWidth = constraints.maxWidth;
+            final fontSize = (maxWidth * 0.26).clamp(24.0, 120.0); // 增大最小化模式的字体
+            
+            return LEDDisplay(
+              timeString: timerModel.formattedTime,
+              fontSize: fontSize,
+              backgroundColor: AppTheme.darkBackground,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2), // 增加垂直padding确保上下对称
+              onDoubleTap: () {
+                Provider.of<TimerModel>(context, listen: false).restoreWindow();
+              },
+            );
           },
         );
       },
@@ -276,20 +284,23 @@ class _HomePageState extends State<HomePage> with WindowListener {
   }
 
   Widget _buildUltraCompactLEDDisplay(TimerModel timerModel) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 超小模式下调整字体大小以适应280px宽度
-        final maxWidth = constraints.maxWidth;
-        final fontSize = (maxWidth * 0.25).clamp(28.0, 80.0); // 减小字体大小避免溢出
-        
-        return LEDDisplay(
-          timeString: timerModel.formattedTime,
-          fontSize: fontSize,
-          color: const Color(0xFF00FF41),
-          backgroundColor: const Color(0xFF0A0A0A),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1), // 更小的水平padding
-          onDoubleTap: () {
-            Provider.of<TimerModel>(context, listen: false).restoreWindow();
+    return Consumer<ThemeManager>(
+      builder: (context, themeManager, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // 超小模式下调整字体大小以适应280px宽度
+            final maxWidth = constraints.maxWidth;
+            final fontSize = (maxWidth * 0.25).clamp(28.0, 80.0); // 减小字体大小避免溢出
+            
+            return LEDDisplay(
+              timeString: timerModel.formattedTime,
+              fontSize: fontSize,
+              backgroundColor: AppTheme.darkBackground,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1), // 更小的水平padding
+              onDoubleTap: () {
+                Provider.of<TimerModel>(context, listen: false).restoreWindow();
+              },
+            );
           },
         );
       },

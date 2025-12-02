@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/timer_model.dart';
+import '../theme/app_theme.dart';
+import '../theme/theme_manager.dart';
+import 'theme_selector.dart';
 
 class ControlPanel extends StatelessWidget {
   const ControlPanel({super.key});
@@ -8,50 +11,41 @@ class ControlPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timerModel = Provider.of<TimerModel>(context);
+    final themeManager = Provider.of<ThemeManager>(context);
     final isCompact = MediaQuery.of(context).size.height < 320;
     
     return Container(
-      padding: EdgeInsets.all(isCompact ? 4 : 8), // 根据高度动态调整padding
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF00FF41).withValues(alpha: 0.2), width: 1),
-      ),
+      padding: EdgeInsets.all(isCompact ? 4 : 8),
+      decoration: AppTheme.controlPanelStyle(themeManager),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // 快捷时间设置按钮
-          _buildQuickTimeButtons(timerModel, isCompact),
-          SizedBox(height: isCompact ? 5 : 10),
+          _buildQuickTimeButtons(timerModel, themeManager, isCompact),
+          SizedBox(height: isCompact ? 2 : 10),
           // 微调按钮
-          _buildAdjustmentButtons(timerModel, isCompact),
-          SizedBox(height: isCompact ? 5 : 10),
-          // 控制按钮
-          _buildControlButtons(timerModel, isCompact),
+          _buildAdjustmentButtons(timerModel, themeManager, isCompact),
+          SizedBox(height: isCompact ? 2 : 8),
+          // 控制按钮（包含主题选择器）
+          _buildControlButtonsWithTheme(timerModel, themeManager, isCompact),
         ],
       ),
     );
   }
 
-  Widget _buildQuickTimeButtons(TimerModel timerModel, bool isCompact) {
+  Widget _buildQuickTimeButtons(TimerModel timerModel, ThemeManager themeManager, bool isCompact) {
     return Wrap(
       spacing: isCompact ? 4 : 8,
       runSpacing: isCompact ? 2 : 4,
       children: TimerModel.quickTimes.map((minutes) {
         return ElevatedButton(
           onPressed: () => timerModel.setTime(minutes),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2A2A2A),
-            foregroundColor: const Color(0xFF00FF41),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-              side: BorderSide(color: const Color(0xFF00FF41).withValues(alpha: 0.3)),
-            ),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 6 : 10, 
-              vertical: isCompact ? 2 : 4
-            ),
-            minimumSize: Size(isCompact ? 40 : 50, isCompact ? 20 : 28),
+          style: AppTheme.quickTimeButtonStyle(
+            themeManager: themeManager,
+            horizontalPadding: isCompact ? 6 : 10,
+            verticalPadding: isCompact ? 2 : 4,
+            minWidth: isCompact ? 40 : 50,
+            minHeight: isCompact ? 20 : 28,
           ),
           child: Text(
             '${minutes}min',
@@ -62,18 +56,16 @@ class ControlPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildAdjustmentButtons(TimerModel timerModel, bool isCompact) {
+  Widget _buildAdjustmentButtons(TimerModel timerModel, ThemeManager themeManager, bool isCompact) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         ElevatedButton(
           onPressed: () => timerModel.subtractTime(1),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2A2A2A),
-            foregroundColor: const Color(0xFF00FF41),
-            shape: const CircleBorder(),
-            padding: EdgeInsets.all(isCompact ? 6 : 10),
-            minimumSize: Size(isCompact ? 32 : 40, isCompact ? 32 : 40),
+          style: AppTheme.circleButtonStyle(
+            themeManager: themeManager,
+            padding: isCompact ? 6 : 10,
+            size: isCompact ? 32 : 40,
           ),
           child: Icon(Icons.remove, size: isCompact ? 16 : 24),
         ),
@@ -84,16 +76,16 @@ class ControlPanel extends StatelessWidget {
             vertical: isCompact ? 4 : 6
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0A0A),
+            color: AppTheme.darkBackground,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: const Color(0xFF00FF41).withValues(alpha: 0.2)),
+            border: Border.all(color: AppTheme.borderColorWithOpacity(themeManager, 0.2)),
           ),
           child: Text(
             '${timerModel.totalSeconds ~/ 60} min',
             style: TextStyle(
-              color: const Color(0xFF00FF41),
+              color: AppTheme.getPrimaryColor(themeManager),
               fontWeight: FontWeight.bold,
-              fontFamily: "NotoSansSC",
+              fontFamily: AppTheme.chineseFontFamily,
               fontSize: isCompact ? 10 : 14,
             ),
           ),
@@ -101,12 +93,10 @@ class ControlPanel extends StatelessWidget {
         
         ElevatedButton(
           onPressed: () => timerModel.addTime(1),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2A2A2A),
-            foregroundColor: const Color(0xFF00FF41),
-            shape: const CircleBorder(),
-            padding: EdgeInsets.all(isCompact ? 6 : 10),
-            minimumSize: Size(isCompact ? 32 : 40, isCompact ? 32 : 40),
+          style: AppTheme.circleButtonStyle(
+            themeManager: themeManager,
+            padding: isCompact ? 6 : 10,
+            size: isCompact ? 32 : 40,
           ),
           child: Icon(Icons.add, size: isCompact ? 16 : 24),
         ),
@@ -114,55 +104,57 @@ class ControlPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildControlButtons(TimerModel timerModel, bool isCompact) {
+  Widget _buildControlButtonsWithTheme(TimerModel timerModel, ThemeManager themeManager, bool isCompact) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        // 开始/暂停按钮
         ElevatedButton(
           onPressed: timerModel.toggleTimer,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: timerModel.isRunning 
-                ? const Color(0xFFFF4444) 
-                : const Color(0xFF00AA00),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 10 : 16, 
-              vertical: isCompact ? 6 : 8
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            minimumSize: Size(isCompact ? 50 : 60, isCompact ? 24 : 32),
+          style: AppTheme.primaryButtonStyle(
+            themeManager: themeManager,
+            isRunning: timerModel.isRunning,
+            horizontalPadding: isCompact ? 10 : 16,
+            verticalPadding: isCompact ? 6 : 8,
+            minWidth: isCompact ? 50 : 60,
+            minHeight: isCompact ? 24 : 32,
           ),
           child: Text(
             timerModel.isRunning ? '暂停' : '开始',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontFamily: "NotoSansSC",
+              fontFamily: AppTheme.chineseFontFamily,
               fontSize: isCompact ? 10 : 14,
             ),
           ),
         ),
         
+        // 紧凑型主题选择器 - 在紧凑模式下也显示
+        if (!isCompact) ...[
+          const SizedBox(width: 8),
+          CompactThemeSelector(themeManager: themeManager),
+          const SizedBox(width: 8),
+        ] else ...[
+          const SizedBox(width: 4),
+          CompactThemeSelector(themeManager: themeManager),
+          const SizedBox(width: 4),
+        ],
+        
+        // 重置按钮
         ElevatedButton(
           onPressed: timerModel.resetTimer,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2A2A2A),
-            foregroundColor: const Color(0xFF00FF41),
-            padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 10 : 16, 
-              vertical: isCompact ? 6 : 8
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            minimumSize: Size(isCompact ? 50 : 60, isCompact ? 24 : 32),
+          style: AppTheme.secondaryButtonStyle(
+            themeManager: themeManager,
+            horizontalPadding: isCompact ? 10 : 16,
+            verticalPadding: isCompact ? 6 : 8,
+            minWidth: isCompact ? 50 : 60,
+            minHeight: isCompact ? 24 : 32,
           ),
           child: Text(
             '重置', 
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontFamily: "NotoSansSC",
+              fontFamily: AppTheme.chineseFontFamily,
               fontSize: isCompact ? 10 : 14,
             ),
           ),

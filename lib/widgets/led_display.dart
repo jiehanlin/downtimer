@@ -2,22 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:provider/provider.dart';
 import '../models/timer_model.dart';
+import '../theme/app_theme.dart';
+import '../theme/theme_manager.dart';
 
 class LEDDisplay extends StatefulWidget {
   final String timeString;
   final double fontSize;
-  final Color color;
-  final Color backgroundColor;
-  final EdgeInsets padding;
+  final Color? color;
+  final Color? backgroundColor;
+  final EdgeInsets? padding;
   final VoidCallback? onDoubleTap;
 
   const LEDDisplay({
     super.key,
     required this.timeString,
     required this.fontSize,
-    this.color = const Color(0xFF00FF41),
-    this.backgroundColor = const Color(0xFF0A0A0A),
-    this.padding = const EdgeInsets.all(16),
+    this.color,
+    this.backgroundColor,
+    this.padding,
     this.onDoubleTap,
   });
 
@@ -29,29 +31,23 @@ class _LEDDisplayState extends State<LEDDisplay>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _pulseAnimation;
-  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
     super.initState();
     
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: AppTheme.normalAnimationDuration,
       vsync: this,
     );
 
     _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
+      begin: AppTheme.pulseAnimationBegin,
+      end: AppTheme.pulseAnimationEnd,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-
-    _colorAnimation = ColorTween(
-      begin: widget.color,
-      end: widget.color,
-    ).animate(_animationController);
 
     // 启动持续的冒号闪烁动画
     _animationController.repeat(reverse: true);
@@ -63,85 +59,85 @@ class _LEDDisplayState extends State<LEDDisplay>
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(LEDDisplay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _updateAnimation();
-  }
 
-  void _updateAnimation() {
-    final timerModel = Provider.of<TimerModel>(context, listen: false);
-    Color targetColor;
-    int duration;
 
-    if (timerModel.isTenSecondsWarning) {
-      targetColor = const Color(0xFFFF4444);
-      duration = 500; // 快速闪烁
-    } else if (timerModel.isOneMinuteWarning) {
-      targetColor = const Color(0xFFFFD700);
-      duration = 2000; // 慢速闪烁
-    } else {
-      targetColor = widget.color;
-      duration = 1000; // 正常状态下的冒号闪烁频率
-    }
 
-    _colorAnimation = ColorTween(
-      begin: widget.color,
-      end: targetColor,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _animationController.duration = Duration(milliseconds: duration);
-    
-    // 始终保持动画运行，确保冒号持续闪烁
-    _animationController.repeat(reverse: true);
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TimerModel>(
-      builder: (context, timerModel, child) {
-        return AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            final currentColor = _colorAnimation.value ?? widget.color;
-            
-            return GestureDetector(
-              onDoubleTap: widget.onDoubleTap,
-              onPanStart: (details) {
-                windowManager.startDragging();
-              },
-              child: Transform.scale(
+    return Consumer2<TimerModel, ThemeManager>(
+      builder: (context, timerModel, themeManager, child) {
+        // 直接获取当前颜色，不依赖动画
+        final currentColor = _getCurrentColor(timerModel, themeManager);
+        
+        return GestureDetector(
+          onDoubleTap: widget.onDoubleTap,
+          onPanStart: (details) {
+            windowManager.startDragging();
+          },
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              // 使用简单的颜色计算，确保主题变化时立即更新
+              final displayColor = _getDisplayColor(currentColor, timerModel);
+              
+              return Transform.scale(
                 scale: (timerModel.isTenSecondsWarning || timerModel.isOneMinuteWarning) 
                     ? _pulseAnimation.value 
                     : 1.0,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: widget.backgroundColor,
+                    color: widget.backgroundColor ?? AppTheme.darkBackground,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: currentColor.withValues(alpha: 0.3), width: 1),
+                    border: Border.all(color: displayColor.withValues(alpha: 0.3), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: currentColor.withValues(alpha: 0.2),
-                        blurRadius: timerModel.isTenSecondsWarning ? 20 : 10,
-                        spreadRadius: timerModel.isTenSecondsWarning ? 4 : 2,
+                        color: displayColor.withValues(alpha: 0.2),
+                        blurRadius: timerModel.isTenSecondsWarning 
+                            ? AppTheme.warningShadowBlur 
+                            : AppTheme.normalShadowBlur,
+                        spreadRadius: timerModel.isTenSecondsWarning 
+                            ? AppTheme.warningShadowSpread 
+                            : AppTheme.normalShadowSpread,
                       ),
                     ],
                   ),
-                  padding: widget.padding,
+                  padding: widget.padding ?? const EdgeInsets.all(16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: _buildDigits(currentColor),
+                    children: _buildDigits(displayColor),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
+  }
+  
+  // 获取当前基础颜色
+  Color _getCurrentColor(TimerModel timerModel, ThemeManager themeManager) {
+    // 优先检查警告状态，确保警告颜色始终显示
+    if (timerModel.isTenSecondsWarning) {
+      return AppTheme.warningColor;
+    } else if (timerModel.isOneMinuteWarning) {
+      return AppTheme.cautionColor;
+    }
+    
+    // 如果手动指定了颜色（例如从外部传入的主题色）
+    if (widget.color != null) {
+      return widget.color!;
+    }
+    
+    // 默认使用主题色
+    return AppTheme.getPrimaryColor(themeManager);
+  }
+  
+  // 获取显示颜色（考虑冒号闪烁）
+  Color _getDisplayColor(Color baseColor, TimerModel timerModel) {
+    // 对于冒号的闪烁处理在_buildColon方法中处理
+    return baseColor;
   }
 
   List<Widget> _buildDigits(Color currentColor) {
@@ -159,7 +155,7 @@ class _LEDDisplayState extends State<LEDDisplay>
       
       // 在数字之间添加间距，但冒号前后不需要额外间距，减少间距避免溢出
       if (i < widget.timeString.length - 1 && char != ':' && widget.timeString[i + 1] != ':') {
-        digits.add(const SizedBox(width: 4)); // 减少间距从8到4
+        digits.add(const SizedBox(width: AppTheme.ledDigitSpacing)); // 使用主题定义的间距
       }
     }
     
@@ -167,12 +163,14 @@ class _LEDDisplayState extends State<LEDDisplay>
   }
 
   Widget _buildDigit(String digit, Color currentColor) {
+    final isCompact = widget.fontSize < 20;
+    
     return Container(
-      width: widget.fontSize * 0.72, // 固定宽度，0.6太小，0.8太大，设为0.72
-      height: widget.fontSize * 1.2, // 固定高度
+      width: widget.fontSize * AppTheme.ledDigitWidthRatio,
+      height: widget.fontSize * AppTheme.ledDigitHeightRatio,
       padding: EdgeInsets.symmetric(
-        horizontal: widget.fontSize < 20 ? 2 : 6, // 超小模式下减少padding
-        vertical: widget.fontSize < 20 ? 1 : 3,
+        horizontal: isCompact ? AppTheme.ledHorizontalPaddingSmall : AppTheme.ledHorizontalPadding,
+        vertical: isCompact ? AppTheme.ledVerticalPaddingSmall : AppTheme.ledVerticalPadding,
       ),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
@@ -184,7 +182,7 @@ class _LEDDisplayState extends State<LEDDisplay>
         child: Text(
           digit,
           style: TextStyle(
-            fontFamily: 'DSDigital',
+            fontFamily: AppTheme.ledFontFamily,
             fontSize: widget.fontSize,
             fontWeight: FontWeight.bold,
             color: currentColor,
@@ -208,20 +206,21 @@ class _LEDDisplayState extends State<LEDDisplay>
   Widget _buildColon(Color currentColor) {
     // 使用动画控制器的值来控制闪烁
     final shouldBlink = (_animationController.value * 2).floor() % 2 == 0;
+    final isCompact = widget.fontSize < 20;
     
     return Container(
-      width: widget.fontSize * 0.36, // 冒号的固定宽度，按0.72的0.5比例调整
-      height: widget.fontSize * 1.2, // 与数字相同的高度
+      width: widget.fontSize * AppTheme.ledColonWidthRatio, // 冒号的固定宽度
+      height: widget.fontSize * AppTheme.ledColonHeightRatio, // 与数字相同的高度
       padding: EdgeInsets.symmetric(
-        horizontal: widget.fontSize < 20 ? 1 : 4, // 超小模式下减少padding
+        horizontal: isCompact ? 1 : 4, // 超小模式下减少padding
       ),
       child: FittedBox( // 使用FittedBox确保冒号在容器内完整显示
         fit: BoxFit.scaleDown,
         child: Text(
           ':',
           style: TextStyle(
-            fontFamily: 'DSDigital',
-            fontSize: widget.fontSize * 0.8<15?widget.fontSize * 1.2 : widget.fontSize * 0.8,
+            fontFamily: AppTheme.ledFontFamily,
+            fontSize: widget.fontSize * 0.8 < 15 ? widget.fontSize * 1.2 : widget.fontSize * 0.8,
             fontWeight: FontWeight.bold,
             color: shouldBlink ? currentColor : currentColor.withValues(alpha: 0.2),
             shadows: shouldBlink ? [
